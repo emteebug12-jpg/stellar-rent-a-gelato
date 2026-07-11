@@ -1,0 +1,12 @@
+[workspace]
+resolver = "2"
+members = ["contracts/rent_gelato"]
+
+# `overflow-checks = true` is explicit (not just implied by debug builds) so
+# that i128 balance arithmetic in RentGelato panics on overflow even in
+# release builds, rather than silently wrapping.
+[profile.release]
+opt-level = "z"
+overflow-checks = true
+codegen-units = 1
+lto = true
