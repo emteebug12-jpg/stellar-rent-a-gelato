@@ -1,5 +1,6 @@
 import { Keypair, rpc } from "@stellar/stellar-sdk";
 import { config } from "./config.js";
+import { logger } from "./logger.js";
 
 /**
  * A registration discovered on-chain that looks due for a poke.
@@ -51,27 +52,43 @@ function todoNotImplemented(fnName: string): never {
   throw new Error(`${fnName} is not implemented yet — see TODO comments in src/index.ts`);
 }
 
+/** Monotonic counter used to tag every log line with the cycle it belongs to. */
+let cycleCount = 0;
+
 /**
  * One scan-and-poke cycle: find registrations at risk of TTL expiry and
  * submit a poke transaction for each one, sequentially, logging failures
  * without aborting the rest of the batch.
  */
 async function scanAndPokeTargets(): Promise<void> {
+  const cycle = ++cycleCount;
   const registrations = await listLowTtlRegistrations();
 
   if (registrations.length === 0) {
-    console.log("[keeper] no low-TTL registrations found this cycle");
+    logger.info(
+      { event: "scan_complete", cycle, registrations: 0 },
+      "no low-TTL registrations found this cycle",
+    );
     return;
   }
 
   for (const registration of registrations) {
     try {
-      console.log(
-        `[keeper] poking registration ${registration.registrationId} (ttl=${registration.currentTtl})`,
+      logger.info(
+        {
+          event: "poke_attempt",
+          cycle,
+          registrationId: registration.registrationId,
+          ttl: registration.currentTtl,
+        },
+        "poking registration",
       );
       await submitPoke(registration);
     } catch (error) {
-      console.error(`[keeper] failed to poke ${registration.registrationId}:`, error);
+      logger.error(
+        { event: "poke_failed", cycle, registrationId: registration.registrationId, err: error },
+        "failed to poke registration",
+      );
     }
   }
 }
@@ -81,9 +98,13 @@ async function scanAndPokeTargets(): Promise<void> {
  * a fixed interval defined by `KEEPER_POLL_INTERVAL_MS`.
  */
 function main(): void {
-  console.log(
-    `[keeper] starting RentGelato keeper engine (interval=${config.pollIntervalMs}ms, ` +
-      `contract=${config.contractId || "<unset>"})`,
+  logger.info(
+    {
+      event: "keeper_start",
+      intervalMs: config.pollIntervalMs,
+      contractId: config.contractId || null,
+    },
+    "starting RentGelato keeper engine",
   );
 
   void scanAndPokeTargets();

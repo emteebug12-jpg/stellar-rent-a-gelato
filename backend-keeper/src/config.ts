@@ -15,6 +15,9 @@ export const config = {
   contractId: process.env.RENT_GELATO_CONTRACT_ID ?? "",
   pollIntervalMs: Number(process.env.KEEPER_POLL_INTERVAL_MS ?? 60_000),
   lowTtlThreshold: Number(process.env.KEEPER_LOW_TTL_THRESHOLD ?? 1_000),
+  // Structured-log level (see src/logger.ts). Accepts any pino level:
+  // trace | debug | info | warn | error | fatal | silent.
+  logLevel: process.env.LOG_LEVEL ?? "info",
   // Only resolved lazily by callers that actually need to sign, so the
   // daemon can still boot (e.g. for dry runs) without a key configured.
   requireKeeperSecretKey: () => requireEnv("KEEPER_SECRET_KEY"),
