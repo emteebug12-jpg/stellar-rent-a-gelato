@@ -2,7 +2,7 @@
 
 A decentralized state-preservation and automated TTL-extension engine for Soroban. Users register a target ledger footprint and fund it; an open, incentivized keeper network "pokes" the registration before its TTL expires, keeping the on-chain state alive indefinitely without manual intervention.
 
-This repository is scaffolded for the **Drips Stellar Wave Program**: the structure, types, and entry points are in place, and the core business logic is intentionally left as `todo!()` / TODO hooks for contributors to pick up during the sprint. See [CONTRIBUTING.md](CONTRIBUTING.md) for the scoped task list.
+Types, and entry points are in place, and the core business logic is intentionally left as `todo!()` / TODO hooks for contributors to pick up during the sprint. See [CONTRIBUTING.md](CONTRIBUTING.md) for the scoped task list.
 
 ## Architecture
 
