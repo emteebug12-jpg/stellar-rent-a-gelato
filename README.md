@@ -1,8 +1,33 @@
-# Stellar Rent Gelato
+# Stellar Rent Gelato 🍦
 
-A decentralized state-preservation and automated TTL-extension engine for Soroban. Users register a target ledger footprint and fund it; an open, incentivized keeper network "pokes" the registration before its TTL expires, keeping the on-chain state alive indefinitely without manual intervention.
+**Automated, incentivized TTL management for Soroban smart contract state.**
 
-Types, and entry points are in place, and the core business logic is intentionally left as `todo!()` / TODO hooks for contributors to pick up during the sprint. See [CONTRIBUTING.md](CONTRIBUTING.md) for the scoped task list.
+Stellar Rent Gelato is an open-source "keep-alive" layer for Soroban: it lets anyone fund a keeper network to automatically extend the lifetime of on-chain data before it expires, so contracts and dApps never lose state to archival.
+
+## The problem it solves
+
+Soroban uses a **state expiration (rent) model**: every contract instance and every piece of `persistent`/`temporary` storage is stored with a **time-to-live (TTL)**, measured in ledgers. When an entry's TTL hits zero, it is **archived** — it stops being readable/writable on the live ledger until it is explicitly restored (and, for `temporary` storage, it is deleted outright).
+
+This is a deliberate, healthy design: it keeps the Stellar ledger's active state small and keeps fees predictable, instead of every contract paying forever for storage it wrote once. But it pushes a real operational burden onto every contract author:
+
+- Contracts and dApps must remember to call `extend_ttl` on every entry that matters, on a schedule, forever — or risk that data (balances, NFTs, DAO votes, oracle prices, escrow state, subscription records, etc.) silently going dark.
+- A dApp with no active users for a while can come back to find its own state has expired, breaking reads until someone pays to restore it.
+- There is no standard, reusable, incentive-aligned way to outsource "keep my contract's data alive" — every team either builds a bespoke cron job with a hot wallet, or hopes they remember before it's too late.
+
+**Rent Gelato turns TTL maintenance into a market**, borrowing the "Gelato Network" pattern from EVM chains (automated, keeper-executed transactions) and adapting it to Soroban's storage/TTL primitives:
+
+1. A user (or protocol) **deposits** funds into the RentGelato contract to pay for future upkeep.
+2. They **register** a target footprint — their own contract's storage, an NFT record, a DAO's state, anything with a TTL — along with a TTL threshold that defines "getting low."
+3. An open, permissionless network of **keepers** continuously scans registered targets. When one drops below its threshold, any keeper can call `poke`, which extends the TTL on-chain and earns a fee debited from the owner's deposited balance.
+
+The result: contract state that would otherwise require manual babysitting stays alive indefinitely, paid for transparently out of a balance the owner tops up, maintained by whichever keeper gets there first — no centralized operator, no single point of failure.
+
+## Why this matters for the Stellar/Soroban ecosystem
+
+- **Removes a sharp edge from Soroban's rent model.** State expiration is one of the first things that surprises teams building on Soroban; Rent Gelato gives the ecosystem a shared, audited answer instead of N bespoke ones.
+- **Composable primitive, not a point solution.** Any contract, index, or off-chain service that cares about a specific ledger footprint can register it — DeFi protocols protecting pool state, NFT platforms protecting metadata, DAOs protecting proposal/vote records, oracle feeds, subscription/escrow systems.
+- **Keeper economics are permissionless.** Anyone can run a keeper and earn fees for pokes — there's no whitelist, matching Stellar/Soroban's open validator/operator ethos.
+- **A good showcase of core Soroban primitives.** The project exercises `Address::require_auth`, `#[contracttype]` storage modeling, persistent-entry TTL extension, and signed `i128` accounting — useful reference code for anyone learning to build production Soroban contracts.
 
 ## Architecture
 
@@ -27,6 +52,12 @@ Next.js dashboard for connecting Freighter, registering targets, and inspecting 
 ### Backend keeper (`backend-keeper/`)
 
 A standalone daemon (`src/index.ts`) that polls Soroban RPC on an interval, finds registrations below a low-TTL threshold, and submits `poke` transactions signed by a dedicated keeper account.
+
+## Project status
+
+This repository is a working, from-scratch scaffold: the architecture, storage layout, and entry-point signatures are settled, and the code builds/typechecks cleanly end-to-end — but the core business logic behind `deposit`, `register_target`, and `poke`, along with the frontend's RPC calls and the keeper's scan/poke loop, is intentionally left open (`todo!()` in Rust, `// TODO` in TypeScript) for contributors to implement.
+
+Want to help? See [CONTRIBUTING.md](CONTRIBUTING.md) for the full task list and how to get set up.
 
 ## Getting started
 
